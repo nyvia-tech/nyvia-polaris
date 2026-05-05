@@ -4,7 +4,7 @@ const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:8000').trim().
 
 async function proxy(req: NextRequest, params: { path: string[] }) {
   const path = params.path.join('/');
-  const url = `${BACKEND_URL}/${path}`;
+  const url = `${BACKEND_URL}/${path}/`;
 
   console.log(`[proxy] ${req.method} ${url}`);
 
