@@ -19,7 +19,7 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
       method: req.method,
       headers: { 'Content-Type': 'application/json' },
       body,
-      signal: AbortSignal.timeout(60_000), // 60s para el cold start de Render
+      signal: AbortSignal.timeout(60_000),
     });
   } catch (err) {
     console.error(`[proxy] fetch failed:`, err);
@@ -29,14 +29,16 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
     );
   }
 
+  // Leer como texto primero para evitar "body already consumed"
+  const text = await response.text();
+  console.log(`[proxy] status=${response.status} body=${text.slice(0, 200)}`);
+
   let data: unknown;
   try {
-    data = await response.json();
+    data = JSON.parse(text);
   } catch {
-    const text = await response.text();
-    console.error(`[proxy] response no es JSON:`, text);
     return NextResponse.json(
-      { detail: 'El backend devolvió una respuesta inesperada.' },
+      { detail: `Error del backend: ${text.slice(0, 300)}` },
       { status: 502 }
     );
   }
