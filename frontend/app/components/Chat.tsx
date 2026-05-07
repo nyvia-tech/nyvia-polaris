@@ -62,7 +62,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-3xl mx-auto px-4">
+    <div className="flex flex-col h-full max-w-3xl mx-auto px-4">
       {/* Header */}
       <div className="py-5 border-b border-nyvia-border">
         <h1 className="text-2xl font-bold text-white">

@@ -79,7 +79,7 @@ export default function Eval() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="h-full overflow-y-auto max-w-5xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-white">Evaluación LLM-as-Judge</h2>

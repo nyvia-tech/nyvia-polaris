@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from langfuse.decorators import observe, langfuse_context
 from services.embeddings import embed_query
 from services.vector_store import search
 from services.llm import ask
@@ -25,9 +26,16 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/", response_model=ChatResponse)
+@observe(name="rag-chat")
 def chat(req: ChatRequest):
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="La pregunta no puede estar vacía.")
+
+    langfuse_context.update_current_trace(
+        name="rag-chat",
+        input=req.question,
+        metadata={"top_k": req.top_k},
+    )
 
     query_vector = embed_query(req.question)
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
@@ -47,4 +55,15 @@ def chat(req: ChatRequest):
         )
         for c in chunks
     ]
+
+    langfuse_context.update_current_trace(
+        output=answer,
+        metadata={
+            "top_k": req.top_k,
+            "num_sources": len(sources),
+            "sources": [s.source for s in sources],
+        },
+    )
+
+    langfuse_context.flush()
     return ChatResponse(answer=answer, sources=sources)
