@@ -41,6 +41,7 @@ def chat(req: ChatRequest):
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
 
     if not chunks:
+        langfuse_context.flush()
         return ChatResponse(
             answer="No tengo información sobre eso en la base de conocimiento de Nyvia.",
             sources=[],
