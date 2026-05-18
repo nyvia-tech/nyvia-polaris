@@ -10,7 +10,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 class ChatRequest(BaseModel):
     question: str
-    top_k: int = 5
+    top_k: int = 8
     filters: dict | None = None
 
 

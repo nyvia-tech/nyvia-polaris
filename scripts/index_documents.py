@@ -20,8 +20,8 @@ from services.embeddings import embed_texts
 from services.vector_store import upsert_chunks, ensure_collection
 
 DOCS_DIR = Path(__file__).parent.parent / "docs"
-CHUNK_SIZE = 500  # caracteres por chunk
-CHUNK_OVERLAP = 100
+CHUNK_SIZE = 1200  # caracteres por chunk
+CHUNK_OVERLAP = 200
 
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
