@@ -8,6 +8,7 @@ SYSTEM_PROMPT = """Eres Nyvia Brain, el asistente de conocimiento interno de Nyv
 
 Tu rol:
 - Responder preguntas usando EXCLUSIVAMENTE los fragmentos de contexto que se te proveen.
+- Cuando la pregunta pida enumerar elementos (fases, pasos, etapas, pilares, etc.), incluye TODOS los que aparezcan en el contexto, sin omitir ninguno.
 - Citar la fuente de cada afirmación con el formato [Fuente: nombre_archivo, sección].
 - Si la información no está en el contexto, decir claramente: "No tengo información sobre eso en la base de conocimiento de Nyvia."
 - Ser preciso, directo y profesional.
@@ -34,7 +35,7 @@ def ask(question: str, context_chunks: list[dict]) -> str:
 
     response = _client.chat.completions.create(
         model=settings.openai_model,
-        max_tokens=1024,
+        max_tokens=2048,
         messages=messages,
     )
 
