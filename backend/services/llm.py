@@ -36,7 +36,7 @@ def ask(question: str, context_chunks: list[dict]) -> str:
     response = _client.chat.completions.create(
         model=settings.openai_model,
         max_tokens=2048,
-        temperature=0.7,
+        temperature=0.85,
         messages=messages,
     )
 
