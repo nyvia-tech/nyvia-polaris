@@ -37,13 +37,16 @@ def chat(req: ChatRequest):
         metadata={"top_k": req.top_k},
     )
 
+    MIN_SCORE = 0.40
+
     query_vector = embed_query(req.question)
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
+    chunks = [c for c in chunks if c.get("score", 0) >= MIN_SCORE]
 
     if not chunks:
         langfuse_context.flush()
         return ChatResponse(
-            answer="No tengo información sobre eso en la base de conocimiento de Nyvia.",
+            answer="No tengo esa información en la base de conocimiento de Nyvia.",
             sources=[],
         )
 
