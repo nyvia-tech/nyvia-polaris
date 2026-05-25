@@ -1,4 +1,4 @@
-# Nyvia Brain — Base de conocimiento interna
+# Nyvia Polaris — Base de conocimiento interna
 
 Sistema RAG (Retrieval-Augmented Generation) que permite al equipo de Nyvia consultar conocimiento interno en lenguaje natural. Incluye chat con citas de fuentes y panel de evaluación automática de calidad.
 
