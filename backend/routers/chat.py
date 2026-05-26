@@ -1,11 +1,19 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from langfuse import Langfuse
 from langfuse.decorators import observe, langfuse_context
 from services.embeddings import embed_query
 from services.vector_store import search
 from services.llm import ask
+from config import settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+_langfuse = Langfuse(
+    public_key=settings.langfuse_public_key,
+    secret_key=settings.langfuse_secret_key,
+    host=settings.langfuse_host,
+)
 
 
 class ChatRequest(BaseModel):
@@ -23,6 +31,12 @@ class SourceChunk(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: list[SourceChunk]
+    trace_id: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    trace_id: str
+    value: int  # 1 = útil, 0 = no útil
 
 
 @router.post("/", response_model=ChatResponse)
@@ -43,11 +57,14 @@ def chat(req: ChatRequest):
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
     chunks = [c for c in chunks if c.get("score", 0) >= MIN_SCORE]
 
+    trace_id = langfuse_context.get_current_trace_id()
+
     if not chunks:
         langfuse_context.flush()
         return ChatResponse(
             answer="No tengo esa información en la base de conocimiento de Nyvia.",
             sources=[],
+            trace_id=trace_id,
         )
 
     answer = ask(req.question, chunks)
@@ -70,4 +87,19 @@ def chat(req: ChatRequest):
     )
 
     langfuse_context.flush()
-    return ChatResponse(answer=answer, sources=sources)
+    return ChatResponse(answer=answer, sources=sources, trace_id=trace_id)
+
+
+@router.post("/feedback")
+def feedback(req: FeedbackRequest):
+    if req.value not in (0, 1):
+        raise HTTPException(status_code=400, detail="El valor debe ser 0 o 1.")
+
+    _langfuse.score(
+        trace_id=req.trace_id,
+        name="user-feedback",
+        value=req.value,
+        comment="útil" if req.value == 1 else "no útil",
+    )
+    _langfuse.flush()
+    return {"ok": True}
