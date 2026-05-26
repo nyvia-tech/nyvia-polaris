@@ -11,7 +11,7 @@ langfuse_context.configure(
     public_key=settings.langfuse_public_key,
     secret_key=settings.langfuse_secret_key,
     host=settings.langfuse_host,
-    debug=True,
+    debug=False,
 )
 
 app = FastAPI(title="Nyvia Brain API", version="1.0.0")
