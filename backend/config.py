@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     qdrant_api_key: str = ""    # Qdrant Cloud API key (producción)
 
     openai_model: str = "gpt-4o"
-    judge_model: str = "gpt-4o"
+    judge_model: str = "gpt-5.2"
     embedding_model: str = "text-embedding-3-small"
     embedding_dim: int = 1536
 
