@@ -33,7 +33,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             for line in fm.splitlines():
                 if ":" in line:
                     k, v = line.split(":", 1)
-                    meta[k.strip()] = v.strip().strip('"')
+                    meta[k.strip()] = v.strip().split("#")[0].strip().strip('"').strip("'")
             text = text[end + 3:].strip()
     elif "\n---\n" in text:
         # Formato destilado: metadata libre antes del primer "---"
@@ -43,7 +43,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             line = line.strip()
             if ":" in line and not line.startswith("#") and not line.startswith("-"):
                 k, v = line.split(":", 1)
-                meta[k.strip()] = v.strip().strip('"').split("#")[0].strip()
+                meta[k.strip()] = v.strip().split("#")[0].strip().strip('"').strip("'")
         text = text[sep_idx + 5:].strip()
     return meta, text
 

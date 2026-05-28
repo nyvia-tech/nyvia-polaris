@@ -52,7 +52,7 @@ def chat(req: ChatRequest):
     )
 
     MIN_SCORE = 0.25
-    HIGH_SCORE = 0.40
+    HIGH_SCORE = 0.55
 
     query_vector = embed_query(req.question)
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
