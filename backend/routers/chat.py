@@ -51,7 +51,8 @@ def chat(req: ChatRequest):
         metadata={"top_k": req.top_k},
     )
 
-    MIN_SCORE = 0.40
+    MIN_SCORE = 0.25
+    HIGH_SCORE = 0.40
 
     query_vector = embed_query(req.question)
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
@@ -67,7 +68,8 @@ def chat(req: ChatRequest):
             trace_id=trace_id,
         )
 
-    answer = ask(req.question, chunks)
+    low_confidence = not any(c.get("score", 0) >= HIGH_SCORE for c in chunks)
+    answer = ask(req.question, chunks, low_confidence=low_confidence)
     sources = [
         SourceChunk(
             source=c.get("source", "desconocido"),
@@ -83,6 +85,7 @@ def chat(req: ChatRequest):
             "top_k": req.top_k,
             "num_sources": len(sources),
             "sources": [s.source for s in sources],
+            "low_confidence": low_confidence,
         },
     )
 

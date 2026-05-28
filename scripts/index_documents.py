@@ -48,13 +48,28 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     return meta, text
 
 
+def split_by_sections(text: str) -> list[str]:
+    """Split on ## / ### headers to preserve semantic boundaries."""
+    sections = re.split(r'\n(?=#{2,3}\s)', text)
+    return [s.strip() for s in sections if len(s.strip()) > 50]
+
+
 def split_chunks(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
+    sections = split_by_sections(text)
+    # If no headers found, treat whole text as one section
+    if not sections:
+        sections = [text]
+
     chunks = []
-    start = 0
-    while start < len(text):
-        end = start + size
-        chunks.append(text[start:end].strip())
-        start += size - overlap
+    for section in sections:
+        if len(section) <= size:
+            chunks.append(section)
+        else:
+            start = 0
+            while start < len(section):
+                end = start + size
+                chunks.append(section[start:end].strip())
+                start += size - overlap
     return [c for c in chunks if len(c) > 50]
 
 

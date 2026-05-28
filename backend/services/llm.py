@@ -19,15 +19,25 @@ Cuando la información SÍ está en el contexto:
 Idioma: responde siempre en el mismo idioma de la pregunta."""
 
 
+LOW_CONFIDENCE_NOTE = (
+    "\n\nNOTA DE SISTEMA: Los fragmentos recuperados tienen relevancia baja. "
+    "Si contienen información suficiente para responder parcialmente, hazlo e indica explícitamente "
+    "que la información puede estar incompleta. Solo usa la frase de no-información si los fragmentos "
+    "no tienen ninguna relación con la pregunta."
+)
+
+
 @observe(as_type="generation", name="llm-answer")
-def ask(question: str, context_chunks: list[dict]) -> str:
+def ask(question: str, context_chunks: list[dict], low_confidence: bool = False) -> str:
     context_text = "\n\n---\n\n".join(
         f"[Fuente: {c.get('source', 'desconocido')}]\n{c.get('text', '')}"
         for c in context_chunks
     )
 
+    system_content = SYSTEM_PROMPT + (LOW_CONFIDENCE_NOTE if low_confidence else "")
+
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": f"Contexto disponible:\n{context_text}\n\n---\n\nPregunta: {question}"},
     ]
 
