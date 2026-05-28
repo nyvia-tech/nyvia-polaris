@@ -13,6 +13,8 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  traceId?: string;
+  feedback?: 1 | 0 | null;
 }
 
 export default function Chat() {
@@ -46,7 +48,13 @@ export default function Chat() {
       const data = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.answer, sources: data.sources },
+        {
+          role: "assistant",
+          content: data.answer,
+          sources: data.sources,
+          traceId: data.trace_id ?? null,
+          feedback: null,
+        },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -58,6 +66,25 @@ export default function Chat() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendFeedback(msgIndex: number, value: 1 | 0) {
+    const msg = messages[msgIndex];
+    if (!msg.traceId || msg.feedback !== null) return;
+
+    setMessages((prev) =>
+      prev.map((m, i) => (i === msgIndex ? { ...m, feedback: value } : m))
+    );
+
+    try {
+      await fetch("/api/backend/chat/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trace_id: msg.traceId, value }),
+      });
+    } catch {
+      // feedback is best-effort, don't revert UI on failure
     }
   }
 
@@ -108,6 +135,34 @@ export default function Chat() {
                       </details>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {msg.role === "assistant" && msg.traceId && (
+                <div className="mt-3 pt-3 border-t border-nyvia-border flex items-center gap-3">
+                  {msg.feedback === null ? (
+                    <>
+                      <span className="text-xs text-nyvia-muted">¿Fue útil?</span>
+                      <button
+                        onClick={() => sendFeedback(i, 1)}
+                        className="text-xs text-nyvia-muted hover:text-nyvia-accent transition-colors"
+                        title="Útil"
+                      >
+                        👍 Útil
+                      </button>
+                      <button
+                        onClick={() => sendFeedback(i, 0)}
+                        className="text-xs text-nyvia-muted hover:text-red-400 transition-colors"
+                        title="No útil"
+                      >
+                        👎 No útil
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-nyvia-muted">
+                      {msg.feedback === 1 ? "👍 Gracias por tu feedback" : "👎 Gracias, lo tendremos en cuenta"}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
