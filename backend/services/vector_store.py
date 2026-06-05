@@ -8,7 +8,7 @@ from qdrant_client.models import (
     MatchValue,
     PayloadSchemaType,
 )
-from langfuse.decorators import observe, langfuse_context
+from langfuse import observe, get_client
 from config import settings
 
 # Cloud si QDRANT_URL está definido, local para desarrollo
@@ -83,7 +83,7 @@ def search(vector: list[float], top_k: int = 5, filters: dict | None = None) -> 
 
     results = [{"score": r.score, **r.payload} for r in response.points]
 
-    langfuse_context.update_current_observation(
+    get_client().update_current_span(
         metadata={
             "top_k": top_k,
             "num_results": len(results),
