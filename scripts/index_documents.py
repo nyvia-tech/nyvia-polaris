@@ -7,6 +7,7 @@ Uso:
 import sys
 import os
 import re
+import time
 import uuid
 from pathlib import Path
 
@@ -18,6 +19,31 @@ load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 from services.embeddings import embed_texts
 from services.vector_store import upsert_chunks, delete_by_source, drop_and_recreate_collection
+
+BATCH_SIZE = 8   # chunks por llamada a Voyage
+RETRY_SLEEP = 22  # segundos entre reintentos en caso de rate limit
+
+
+def embed_texts_with_retry(texts: list[str]) -> list[list[float]]:
+    """Llama embed_texts en lotes con retry ante rate limit."""
+    all_vectors = []
+    for i in range(0, len(texts), BATCH_SIZE):
+        batch = texts[i:i + BATCH_SIZE]
+        for attempt in range(5):
+            try:
+                vecs = embed_texts(batch)
+                all_vectors.extend(vecs)
+                if i + BATCH_SIZE < len(texts):
+                    time.sleep(0.5)
+                break
+            except Exception as e:
+                if "rate" in str(e).lower() and attempt < 4:
+                    wait = RETRY_SLEEP * (attempt + 1)
+                    print(f"    Rate limit — esperando {wait}s (intento {attempt + 1}/5)...")
+                    time.sleep(wait)
+                else:
+                    raise
+    return all_vectors
 
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 CHUNK_SIZE = 1200  # caracteres por chunk
@@ -86,7 +112,7 @@ def index_file(filepath: Path) -> int:
     if not chunks_text:
         return 0
 
-    vectors = embed_texts(chunks_text)
+    vectors = embed_texts_with_retry(chunks_text)
 
     chunks = [
         {

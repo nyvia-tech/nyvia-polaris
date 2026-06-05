@@ -1,20 +1,20 @@
-from openai import OpenAI
-from langfuse.decorators import observe, langfuse_context
+import voyageai
+from langfuse import observe, get_client
 from config import settings
 
-_client = OpenAI(api_key=settings.openai_api_key)
+_client = voyageai.Client(api_key=settings.voyage_api_key)
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    response = _client.embeddings.create(input=texts, model=settings.embedding_model)
-    return [item.embedding for item in response.data]
+    result = _client.embed(texts, model=settings.embedding_model, input_type="document")
+    return result.embeddings
 
 
 @observe(name="embed-query")
 def embed_query(query: str) -> list[float]:
-    langfuse_context.update_current_observation(
+    get_client().update_current_span(
         input=query,
         metadata={"model": settings.embedding_model},
     )
-    response = _client.embeddings.create(input=[query], model=settings.embedding_model)
-    return response.data[0].embedding
+    result = _client.embed([query], model=settings.embedding_model, input_type="query")
+    return result.embeddings[0]

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from langfuse import Langfuse
-from langfuse.decorators import observe, langfuse_context
+from langfuse import Langfuse, observe, get_client
 from services.embeddings import embed_query
 from services.vector_store import search
 from services.llm import ask
@@ -45,7 +44,7 @@ def chat(req: ChatRequest):
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="La pregunta no puede estar vacía.")
 
-    langfuse_context.update_current_trace(
+    get_client().update_current_trace(
         name="rag-chat",
         input=req.question,
         metadata={"top_k": req.top_k},
@@ -58,10 +57,10 @@ def chat(req: ChatRequest):
     chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
     chunks = [c for c in chunks if c.get("score", 0) >= MIN_SCORE]
 
-    trace_id = langfuse_context.get_current_trace_id()
+    trace_id = get_client().get_current_trace_id()
 
     if not chunks:
-        langfuse_context.flush()
+        get_client().flush()
         return ChatResponse(
             answer="No tengo esa información en la base de conocimiento de Nyvia.",
             sources=[],
@@ -79,7 +78,7 @@ def chat(req: ChatRequest):
         for c in chunks
     ]
 
-    langfuse_context.update_current_trace(
+    get_client().update_current_trace(
         output=answer,
         metadata={
             "top_k": req.top_k,
@@ -89,7 +88,7 @@ def chat(req: ChatRequest):
         },
     )
 
-    langfuse_context.flush()
+    get_client().flush()
     return ChatResponse(answer=answer, sources=sources, trace_id=trace_id)
 
 
@@ -98,7 +97,7 @@ def feedback(req: FeedbackRequest):
     if req.value not in (0, 1):
         raise HTTPException(status_code=400, detail="El valor debe ser 0 o 1.")
 
-    _langfuse.score(
+    _langfuse.create_score(
         trace_id=req.trace_id,
         name="user-feedback",
         value=req.value,

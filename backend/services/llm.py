@@ -1,8 +1,8 @@
-from openai import OpenAI
-from langfuse.decorators import observe, langfuse_context
+import anthropic
+from langfuse import observe, get_client
 from config import settings
 
-_client = OpenAI(api_key=settings.openai_api_key)
+_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
 NO_INFO_ANSWER = "No tengo esa información en la base de conocimiento de Nyvia."
 
@@ -39,32 +39,28 @@ def ask(question: str, context_chunks: list[dict], low_confidence: bool = False)
     )
 
     system_content = SYSTEM_PROMPT + (LOW_CONFIDENCE_NOTE if low_confidence else "")
+    user_content = f"Contexto disponible:\n{context_text}\n\n---\n\nPregunta: {question}"
 
-    messages = [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": f"Contexto disponible:\n{context_text}\n\n---\n\nPregunta: {question}"},
-    ]
-
-    langfuse_context.update_current_observation(
-        model=settings.openai_model,
-        input=messages,
+    get_client().update_current_generation(
+        model=settings.anthropic_model,
+        input=[{"role": "user", "content": user_content}],
     )
 
-    response = _client.chat.completions.create(
-        model=settings.openai_model,
+    response = _client.messages.create(
+        model=settings.anthropic_model,
         max_tokens=2048,
-        temperature=0.85,
-        messages=messages,
+        system=system_content,
+        messages=[{"role": "user", "content": user_content}],
     )
 
-    answer = response.choices[0].message.content
+    answer = response.content[0].text
 
-    langfuse_context.update_current_observation(
+    get_client().update_current_generation(
         output=answer,
         usage={
-            "input": response.usage.prompt_tokens,
-            "output": response.usage.completion_tokens,
-            "total": response.usage.total_tokens,
+            "input": response.usage.input_tokens,
+            "output": response.usage.output_tokens,
+            "total": response.usage.input_tokens + response.usage.output_tokens,
         },
     )
 

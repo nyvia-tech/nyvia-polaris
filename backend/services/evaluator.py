@@ -1,9 +1,9 @@
 import json
-from openai import OpenAI
-from langfuse.decorators import observe, langfuse_context
+import anthropic
+from langfuse import observe, get_client
 from config import settings
 
-_client = OpenAI(api_key=settings.openai_api_key)
+_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
 _GROUNDEDNESS_SYSTEM = """Eres un evaluador experto de sistemas RAG.
 Evalúa si la respuesta generada está FUNDAMENTADA en el contexto recuperado.
@@ -35,32 +35,27 @@ Devuelve ÚNICAMENTE un JSON con esta estructura:
 
 @observe(as_type="generation")
 def _judge_call(system: str, user_msg: str, judge_name: str = "judge") -> dict:
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user_msg},
-    ]
-
-    langfuse_context.update_current_observation(
+    get_client().update_current_generation(
         name=f"judge-{judge_name}",
         model=settings.judge_model,
-        input=messages,
+        input=[{"role": "user", "content": user_msg}],
     )
 
-    resp = _client.chat.completions.create(
+    resp = _client.messages.create(
         model=settings.judge_model,
         max_tokens=512,
-        messages=messages,
-        response_format={"type": "json_object"},
+        system=system,
+        messages=[{"role": "user", "content": user_msg}],
     )
 
-    result = json.loads(resp.choices[0].message.content)
+    result = json.loads(resp.content[0].text)
 
-    langfuse_context.update_current_observation(
+    get_client().update_current_generation(
         output=result,
         usage={
-            "input": resp.usage.prompt_tokens,
-            "output": resp.usage.completion_tokens,
-            "total": resp.usage.total_tokens,
+            "input": resp.usage.input_tokens,
+            "output": resp.usage.output_tokens,
+            "total": resp.usage.input_tokens + resp.usage.output_tokens,
         },
     )
 

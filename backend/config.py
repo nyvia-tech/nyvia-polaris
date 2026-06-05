@@ -4,18 +4,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    openai_api_key: str
+    voyage_api_key: str = ""
+    anthropic_api_key: str = ""
     supabase_url: str = ""
     supabase_service_key: str = ""
 
     qdrant_collection: str = "nyvia_brain"
-    qdrant_url: str = ""        # Qdrant Cloud URL (producción)
-    qdrant_api_key: str = ""    # Qdrant Cloud API key (producción)
+    qdrant_url: str = ""
+    qdrant_api_key: str = ""
 
-    openai_model: str = "gpt-4o"
-    judge_model: str = "gpt-5.2"
-    embedding_model: str = "text-embedding-3-small"
-    embedding_dim: int = 1536
+    anthropic_model: str = "claude-opus-4-8"
+    judge_model: str = "claude-haiku-4-5-20251001"
+    embedding_model: str = "voyage-3-large"
+    embedding_dim: int = 1024
 
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
