@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     qdrant_url: str = ""
     qdrant_api_key: str = ""
 
-    anthropic_model: str = "claude-opus-4-8"
+    anthropic_model: str = "claude-sonnet-4-6"
     judge_model: str = "claude-haiku-4-5-20251001"
     embedding_model: str = "voyage-3-large"
     embedding_dim: int = 1024

@@ -49,6 +49,7 @@ def ask(question: str, context_chunks: list[dict], low_confidence: bool = False)
     response = _client.messages.create(
         model=settings.anthropic_model,
         max_tokens=2048,
+        cache_control={"type": "ephemeral"},
         system=system_content,
         messages=[{"role": "user", "content": user_content}],
     )

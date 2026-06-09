@@ -1,3 +1,4 @@
+import time
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -13,7 +14,7 @@ from config import settings
 
 # Cloud si QDRANT_URL está definido, local para desarrollo
 _client = (
-    QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
+    QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None, timeout=60)
     if settings.qdrant_url
     else QdrantClient(path="./qdrant_data")
 )
@@ -50,6 +51,9 @@ def delete_by_source(source: str) -> None:
     )
 
 
+_UPSERT_BATCH = 16
+
+
 def upsert_chunks(chunks: list[dict]) -> None:
     ensure_collection()
     points = [
@@ -60,7 +64,17 @@ def upsert_chunks(chunks: list[dict]) -> None:
         )
         for c in chunks
     ]
-    _client.upsert(collection_name=settings.qdrant_collection, points=points)
+    for i in range(0, len(points), _UPSERT_BATCH):
+        batch = points[i:i + _UPSERT_BATCH]
+        for attempt in range(4):
+            try:
+                _client.upsert(collection_name=settings.qdrant_collection, points=batch)
+                break
+            except Exception as e:
+                if attempt < 3:
+                    time.sleep(3 * (attempt + 1))
+                else:
+                    raise
 
 
 @observe(name="qdrant-search")

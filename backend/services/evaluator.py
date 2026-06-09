@@ -44,6 +44,7 @@ def _judge_call(system: str, user_msg: str, judge_name: str = "judge") -> dict:
     resp = _client.messages.create(
         model=settings.judge_model,
         max_tokens=512,
+        cache_control={"type": "ephemeral"},
         system=system,
         messages=[{"role": "user", "content": user_msg}],
     )
