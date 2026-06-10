@@ -1,6 +1,11 @@
+import re
 import anthropic
 from langfuse import observe, get_client
 from config import settings
+
+
+def _strip_emojis(text: str) -> str:
+    return re.sub(r"[\U00010000-\U0010ffff\U00002600-\U000027BF\U0001F300-\U0001F9FF]", "", text, flags=re.UNICODE)
 
 _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
@@ -55,7 +60,7 @@ def ask(question: str, context_chunks: list[dict], low_confidence: bool = False)
         messages=[{"role": "user", "content": user_content}],
     )
 
-    answer = response.content[0].text
+    answer = _strip_emojis(response.content[0].text)
 
     get_client().update_current_generation(
         output=answer,
