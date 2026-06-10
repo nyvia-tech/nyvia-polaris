@@ -75,54 +75,6 @@ Si solo quieres **usar** Polaris (no instalarlo), esto es lo que necesitas saber
 
 ## 3\. Arquitectura
 
-flowchart LR
-
-    subgraph Frontend\["Frontend (Lovable / React)"\]
-
-        UI\[Chat UI\]
-
-    end
-
-    subgraph Backend\["Backend nyvia-brain (FastAPI en Railway)"\]
-
-        API\["/chat"\]
-
-        EVAL\["/eval"\]
-
-        DEBUG\["/debug · /health"\]
-
-    end
-
-    subgraph Servicios\["Servicios externos"\]
-
-        VO\[Voyage AI\<br/\>Embeddings\]
-
-        QD\[(Qdrant Cloud\<br/\>colección Nyvia\_Polaris)\]
-
-        AN\[Claude · Anthropic\<br/\>Generación\]
-
-        LF\[Langfuse\<br/\>Trazas y evaluación\]
-
-        SB\[(Supabase\<br/\>Auth \+ memoria conversacional)\]
-
-    end
-
-    UI \--\>|POST pregunta| API
-
-    API \--\>|1. embed-query| VO
-
-    API \--\>|2. qdrant-search top-k| QD
-
-    API \--\>|3. llm-answer con contexto| AN
-
-    API \-.-\>|trazas: spans| LF
-
-    EVAL \-.-\>|scores LLM-as-a-Judge| LF
-
-    UI \--\>|login / sesión| SB
-
-    API \-.-\>|memoria conversacional| SB
-
 **Flujo de una pregunta (los tres spans que verás en Langfuse):**
 
 1. **`embed-query`** — La pregunta del usuario se convierte en un vector numérico con el modelo de embeddings de Voyage AI.  
@@ -207,28 +159,6 @@ git clone https://github.com/nyvia-tech/nyvia-polaris.git
 
 cd nyvia-brain
 
-\# 2\. Crear y activar entorno virtual
-
-python \-m venv .venv
-
-\# En Windows (PowerShell):
-
-.venv\\Scripts\\Activate.ps1
-
-\# En macOS/Linux:
-
-source .venv/bin/activate
-
-\# 3\. Instalar dependencias
-
-pip install \-r requirements.txt
-
-\# 4\. Crear tu archivo de configuración
-
-cp .env.example .env
-
-\# … y llenar los valores (siguiente sección)
-
 ### 6.3 Variables de entorno
 
 Crea un archivo `.env` en la raíz del proyecto. **Nunca commitees este archivo** (debe estar en `.gitignore`); lo que se commitea es `.env.example` con valores de muestra. **Puedes pasar temporalmente estas credenciales a Claude Code y luego eliminarlas.**
@@ -286,39 +216,7 @@ La colección que usa Polaris tiene esta configuración exacta (extraída de la 
 - **Tamaño de vector:** `1536`  
 - **Distancia:** `Cosine`
 
-Script para crearla:
-
-\# scripts/create\_collection.py
-
-from qdrant\_client import QdrantClient
-
-from qdrant\_client.models import Distance, VectorParams  
-Nyvia\_Polaris  
-import os
-
-from dotenv import load\_dotenv
-
-load\_dotenv()
-
-client \= QdrantClient(
-
-    url=os.environ\["QDRANT\_URL"\],
-
-    api\_key=os.environ\["QDRANT\_API\_KEY"\],
-
-)
-
-client.create\_collection(
-
-    collection\_name=os.environ.get("QDRANT\_COLLECTION", "Nyvia\_Polaris"),
-
-    vectors\_config=VectorParams(size=1536, distance=Distance.COSINE),
-
-)
-
-print("Colección creada ✅")
-
-python scripts/create\_collection.py
+Buscar el script para crearla en Claude o Claude Code.
 
 ### 6.5 Preparar documentos: formato de destilados
 
@@ -381,98 +279,7 @@ Cada documento se parte en **chunks** y cada chunk se guarda en Qdrant como un *
 
 Estos campos permiten **filtrar la búsqueda** (por ejemplo, restringir a un cliente específico o excluir contenido con `nda_level: alto`).
 
-Script de ingesta de referencia:
-
-\# scripts/ingest.py
-
-"""Ingesta destilados .md a Qdrant: chunking → embedding → upsert."""
-
-import os, uuid, glob
-
-from dotenv import load\_dotenv
-
-import voyageai
-
-from qdrant\_client import QdrantClient
-
-from qdrant\_client.models import PointStruct
-
-load\_dotenv()
-
-CHUNK\_SIZE \= 1500     \# caracteres por chunk   
-CHUNK\_OVERLAP \= 200    \# solapamiento entre chunks consecutivos
-
-vo \= voyageai.Client(api\_key=os.environ\["VOYAGE\_API\_KEY"\])
-
-qd \= QdrantClient(url=os.environ\["QDRANT\_URL"\], api\_key=os.environ\["QDRANT\_API\_KEY"\])
-
-COLLECTION \= os.environ.get("QDRANT\_COLLECTION", "Nyvia\_Polaris")
-
-MODEL \= os.environ.get("EMBEDDING\_MODEL", "voyage-large-2")
-
-def chunk\_text(text: str) \-\> list\[str\]:
-
-    chunks, start \= \[\], 0
-
-    while start \< len(text):
-
-        chunks.append(text\[start : start \+ CHUNK\_SIZE\])
-
-        start \+= CHUNK\_SIZE \- CHUNK\_OVERLAP
-
-    return chunks
-
-def ingest\_file(path: str, client\_name: str \= "nyvia\_interno", dimension: str \= "general"):
-
-    with open(path, encoding="utf-8") as f:
-
-        content \= f.read()
-
-    chunks \= chunk\_text(content)
-
-    vectors \= vo.embed(chunks, model=MODEL, input\_type="document").embeddings
-
-    points \= \[
-
-        PointStruct(
-
-            id=str(uuid.uuid5(uuid.NAMESPACE\_URL, f"{path}-{i}")),  \# determinístico: re-ingestar actualiza en lugar de duplicar
-
-            vector=vec,
-
-            payload={
-
-                "text": chunk,
-
-                "source": os.path.basename(path),
-
-                "client": client\_name,
-
-                "dimension": dimension,
-
-                "date": "",
-
-            },
-
-        )
-
-        for i, (chunk, vec) in enumerate(zip(chunks, vectors))
-
-    \]
-
-    qd.upsert(collection\_name=COLLECTION, points=points)
-
-    print(f"✅ {path}: {len(points)} chunks")
-
-if \_\_name\_\_ \== "\_\_main\_\_":
-
-    for f in glob.glob("docs/destilados/\*.md"):
-
-        ingest\_file(f)
-
-python scripts/ingest.py
-
-**Puntos clave de la ingesta:**
+ **Puntos clave de la ingesta:**
 
 **En el caso del apartado 6, de la ingesta. La indexación se realiza automáticamente apoyado de Claude Code. Más aún, a través de un script.**
 
@@ -551,23 +358,12 @@ Usuario → Frontend (Lovable, hospedado en \*.lovable.app)
 4. **Flujo de autenticación.** El usuario inicia sesión vía Supabase Auth; las rutas del chat solo son accesibles con sesión activa.   
 5. **Publicar.** En Lovable, *Publish* genera la URL pública (`https://<proyecto>.lovable.app`). También puedes conectar un dominio propio.
 
-**CORS:** en `main.py` el middleware de CORS está abierto (`allow_origins=["*"]`) para simplificar la integración con Lovable y Nyvia OS. Para producción se recomienda restringirlo a los dominios reales:
-
-allow\_origins=\[
-
-    "https://\<tu-app\>.lovable.app",
-
-    "https://\<dominio-de-nyvia-os\>",
-
-\]
+**CORS:** en `main.py` el middleware de CORS está abierto (`allow_origins=["*"]`) para simplificar la integración con Lovable y Nyvia OS. Para producción se recomienda restringirlo a los dominios reales.
 
 ### 6.9 Despliegue en Railway
 
 1. Entra a [https://railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → selecciona el repo del backend.  
 2. Railway detecta Python automáticamente. Configura el **start command**:  
-     
-   uvicorn main:app \--host 0.0.0.0 \--port $PORT  
-     
 3. En la pestaña **Variables**, agrega todas las variables de la sección 6.3 (Railway no lee tu `.env`; se configuran en su dashboard).  
 4. En **Settings → Networking → Generate Domain** obtienes la URL pública del API.  
 5. Verifica: `https://<tu-app>.up.railway.app/health` y luego `/debug`.  
