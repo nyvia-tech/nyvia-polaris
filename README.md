@@ -241,7 +241,7 @@ ANTHROPIC\_MODEL=claude-sonnet-4-20250514 \# Modelo de generación
 
 VOYAGE\_API\_KEY=pa-...                   \# Key de Voyage AI
 
-EMBEDDING\_MODEL=voyage-large-2          \# Modelo de embeddings (1536 dim) ⚠️ VERIFICAR nombre exacto
+EMBEDDING\_MODEL=voyage-large-2          \# Modelo de embeddings (1536 dim) 
 
 \# \=== Qdrant (base vectorial) \===
 
@@ -399,8 +399,7 @@ from qdrant\_client.models import PointStruct
 
 load\_dotenv()
 
-CHUNK\_SIZE \= 1200      \# caracteres por chunk  ⚠️ VERIFICAR contra el script original
-
+CHUNK\_SIZE \= 1500     \# caracteres por chunk   
 CHUNK\_OVERLAP \= 200    \# solapamiento entre chunks consecutivos
 
 vo \= voyageai.Client(api\_key=os.environ\["VOYAGE\_API\_KEY"\])
@@ -525,8 +524,6 @@ curl \-X POST http://localhost:8000/chat \\
   \-d '{"question": "¿Cómo define Nyvia el accountability?"}'
 
 Si recibes una respuesta coherente y fundamentada en los documentos, el backend está listo para desplegarse (sección 6.9).
-
-\<\!-- ⚠️ VERIFICAR: ajustar el body exacto del request/response de /chat según routers/chat.py \--\>
 
 **Bonus:** FastAPI genera documentación interactiva automática en `http://localhost:8000/docs` (Swagger). Ahí puedes ver todos los endpoints, sus parámetros, y probarlos desde el navegador sin usar `curl`.
 
