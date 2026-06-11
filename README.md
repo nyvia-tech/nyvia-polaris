@@ -157,11 +157,9 @@ Esta sección permite a cualquier desarrollador levantar una instancia de Polari
 
 git clone https://github.com/nyvia-tech/nyvia-polaris.git
 
-cd nyvia-brain
-
 ### 6.3 Variables de entorno
 
-Crea un archivo `.env` en la raíz del proyecto. **Nunca commitees este archivo** (debe estar en `.gitignore`); lo que se commitea es `.env.example` con valores de muestra. **Puedes pasar temporalmente estas credenciales a Claude Code y luego eliminarlas.**
+Crea un archivo `.env` en la raíz del proyecto. **Nunca commitees este archivo** (debe estar en `.gitignore`); lo que se commitea es `.env.example` con valores de muestra. **Puedes pasar temporalmente estas credenciales a Claude Code y luego cambiarlas.**
 
 \# \=== LLM y Embeddings \===
 
@@ -216,7 +214,7 @@ La colección que usa Polaris tiene esta configuración exacta (extraída de la 
 - **Tamaño de vector:** `1536`  
 - **Distancia:** `Cosine`
 
-Buscar el script para crearla en Claude o Claude Code.
+**Buscar el script para crearla en Claude o Claude Code.**
 
 ### 6.5 Preparar documentos: formato de destilados
 
@@ -264,6 +262,8 @@ Contenido del destilado…
 
 **Convención de nombres de archivo:** `<PREFIJO>-<AAAAMM>-<NNN>.md`, por ejemplo `CUL-202604-001.md` (CUL \= cultura).
 
+**Los template de destilados se encuentran en la siguiente carpeta: [link](https://drive.google.com/drive/folders/1EdnWfiV1dqCQ6KGmnMKuP44p9H_8G6rH?usp=sharing)**
+
 ### 6.6 Ingesta de documentos
 
 Cada documento se parte en **chunks** y cada chunk se guarda en Qdrant como un *point* con este payload (esquema real de la colección, 811 points actualmente):
@@ -281,7 +281,7 @@ Estos campos permiten **filtrar la búsqueda** (por ejemplo, restringir a un cli
 
  **Puntos clave de la ingesta:**
 
-**En el caso del apartado 6, de la ingesta. La indexación se realiza automáticamente apoyado de Claude Code. Más aún, a través de un script.**
+**En el caso del apartado 6, de la ingesta. La indexación se realiza automáticamente apoyado de Claude Code. Más aún, a través de un script que se genera automáticamente.**
 
 - `input_type="document"` al embeber documentos y `input_type="query"` al embeber preguntas — Voyage optimiza distinto cada caso.  
 - IDs determinísticos (UUID v5 sobre `archivo-índice`) hacen que re-ingestar un documento actualizado **reemplace** sus chunks en lugar de duplicarlos.  
@@ -516,7 +516,6 @@ Antes de dar por bueno un despliegue (o después de cambios importantes), correr
 
 **Pendientes identificados:**
 
-- [ ] **2FA / MFA:** validar y activar autenticación de dos factores. Dos frentes: (a) para los usuarios de Polaris — Supabase Auth soporta MFA con TOTP de forma nativa (*Authentication → MFA* en el dashboard); (b) para las cuentas de servicio de [tech@nyvia.mx](mailto:tech@nyvia.mx) (GitHub, Railway, Qdrant, Anthropic, Voyage, Langfuse) — activar 2FA en cada una.  
 - [ ] **Filtrado por `nda_level`:** confirmar que la búsqueda aplica filtros de confidencialidad según el usuario (ver sección 10).  
 - [ ] **Restringir CORS** a los dominios reales de producción (ver sección 6.8).  
 - [ ] **Validar el JWT de Supabase en el backend** para que `/chat` no sea accesible sin sesión (si la protección actual es solo de frontend).  
