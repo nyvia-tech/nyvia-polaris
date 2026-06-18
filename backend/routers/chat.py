@@ -19,6 +19,11 @@ class ChatRequest(BaseModel):
     question: str
     top_k: int = 8
     filters: dict | None = None
+    system_prompt: str | None = None
+    model: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    sources_enabled: dict[str, bool] | None = None
 
 
 class SourceChunk(BaseModel):
@@ -53,8 +58,12 @@ def chat(req: ChatRequest):
     MIN_SCORE = 0.25
     HIGH_SCORE = 0.55
 
+    source_types: list[str] | None = None
+    if req.sources_enabled is not None:
+        source_types = [k for k, enabled in req.sources_enabled.items() if enabled]
+
     query_vector = embed_query(req.question)
-    chunks = search(query_vector, top_k=req.top_k, filters=req.filters)
+    chunks = search(query_vector, top_k=req.top_k, filters=req.filters, source_types=source_types)
     chunks = [c for c in chunks if c.get("score", 0) >= MIN_SCORE]
 
     trace_id = get_client().get_current_trace_id()
@@ -68,7 +77,15 @@ def chat(req: ChatRequest):
         )
 
     low_confidence = not any(c.get("score", 0) >= HIGH_SCORE for c in chunks)
-    answer = ask(req.question, chunks, low_confidence=low_confidence)
+    answer = ask(
+        req.question,
+        chunks,
+        low_confidence=low_confidence,
+        system_prompt_override=req.system_prompt,
+        model_override=req.model,
+        temperature=req.temperature,
+        max_tokens=req.max_tokens,
+    )
     sources = [
         SourceChunk(
             source=c.get("source", "desconocido"),

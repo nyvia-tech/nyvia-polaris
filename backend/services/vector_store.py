@@ -78,14 +78,29 @@ def upsert_chunks(chunks: list[dict]) -> None:
 
 
 @observe(name="qdrant-search")
-def search(vector: list[float], top_k: int = 5, filters: dict | None = None) -> list[dict]:
+def search(
+    vector: list[float],
+    top_k: int = 5,
+    filters: dict | None = None,
+    source_types: list[str] | None = None,
+) -> list[dict]:
     ensure_collection()
+    must_conditions = (
+        [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()]
+        if filters
+        else []
+    )
+    should_conditions = (
+        [FieldCondition(key="source_type", match=MatchValue(value=st)) for st in source_types]
+        if source_types
+        else None
+    )
     qdrant_filter = None
-    if filters:
-        conditions = [
-            FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()
-        ]
-        qdrant_filter = Filter(must=conditions)
+    if must_conditions or should_conditions:
+        qdrant_filter = Filter(
+            must=must_conditions or None,
+            should=should_conditions,
+        )
 
     response = _client.query_points(
         collection_name=settings.qdrant_collection,

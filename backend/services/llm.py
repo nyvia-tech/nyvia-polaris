@@ -59,27 +59,41 @@ LOW_CONFIDENCE_NOTE = (
 
 
 @observe(as_type="generation", name="llm-answer")
-def ask(question: str, context_chunks: list[dict], low_confidence: bool = False) -> str:
+def ask(
+    question: str,
+    context_chunks: list[dict],
+    low_confidence: bool = False,
+    system_prompt_override: str | None = None,
+    model_override: str | None = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+) -> str:
     context_text = "\n\n---\n\n".join(
         f"[Fuente: {c.get('source', 'desconocido')}]\n{c.get('text', '')}"
         for c in context_chunks
     )
 
-    system_content = SYSTEM_PROMPT + (LOW_CONFIDENCE_NOTE if low_confidence else "")
+    base_prompt = system_prompt_override if system_prompt_override else SYSTEM_PROMPT
+    system_content = base_prompt + (LOW_CONFIDENCE_NOTE if low_confidence else "")
     user_content = f"Contexto disponible:\n{context_text}\n\n---\n\nPregunta: {question}"
+    model = model_override or settings.anthropic_model
 
     get_client().update_current_generation(
-        model=settings.anthropic_model,
+        model=model,
         input=[{"role": "user", "content": user_content}],
     )
 
-    response = _client.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=2048,
+    create_kwargs: dict = dict(
+        model=model,
+        max_tokens=max_tokens if max_tokens is not None else 2048,
         cache_control={"type": "ephemeral"},
         system=system_content,
         messages=[{"role": "user", "content": user_content}],
     )
+    if temperature is not None:
+        create_kwargs["temperature"] = temperature
+
+    response = _client.messages.create(**create_kwargs)
 
     answer = _strip_emojis(response.content[0].text)
 
