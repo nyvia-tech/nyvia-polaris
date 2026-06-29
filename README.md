@@ -281,12 +281,52 @@ Estos campos permiten **filtrar la búsqueda** (por ejemplo, restringir a un cli
 
  **Puntos clave de la ingesta:**
 
-**En el caso del apartado 6, de la ingesta. La indexación se realiza automáticamente apoyado de Claude Code. Más aún, a través de un script que se genera automáticamente.**
+La ingesta e indexación de documentos en Nyvia Polaris es el proceso mediante el cual la información nueva o actualizada se incorpora al RAG para que pueda ser consultada posteriormente desde la interfaz de preguntas.
 
-- `input_type="document"` al embeber documentos y `input_type="query"` al embeber preguntas — Voyage optimiza distinto cada caso.  
-- IDs determinísticos (UUID v5 sobre `archivo-índice`) hacen que re-ingestar un documento actualizado **reemplace** sus chunks en lugar de duplicarlos.  
-- Verifica el conteo en el dashboard de Qdrant Cloud después de ingestar.  
-- **\*Para facilitar el proceso de ingesta e Indexación se recomienda usar Claude Code.**
+Este proceso tiene varias etapas importantes:
+
+1. **Actualización de archivos destilados**  
+   En primer lugar, se deben actualizar los archivos destilados que contienen la información curada del proyecto. Estos archivos son la fuente principal de conocimiento que posteriormente será procesada, dividida en chunks, embebida e indexada en la base vectorial.  
+   Es importante asegurarse de que la información esté limpia, bien estructurada y actualizada antes de iniciar la ingesta. La calidad de estos archivos impacta directamente en la calidad de las respuestas que Polaris podrá entregar.  
+2. **Carga de archivos en la carpeta de documentos del proyecto**  
+   Una vez actualizados los archivos destilados, estos deben subirse o reemplazarse dentro de la carpeta de documentos del proyecto del RAG.  
+   Al hacer esto, Visual Studio Code detectará los cambios en el repositorio. Normalmente, los archivos aparecerán como modificados dentro del control de versiones, lo cual permite confirmar qué documentos fueron agregados, reemplazados o actualizados antes de continuar con el proceso.  
+3. **Indexación desde Claude Code en la terminal de Visual Studio Code**  
+   La indexación se realiza automáticamente con apoyo de Claude Code, desde la terminal de Visual Studio Code.  
+   Para facilitar el proceso, se recomienda utilizar Claude Code como asistente operativo dentro del repositorio. Claude Code puede ayudar a revisar los archivos modificados, generar o ejecutar el script de ingesta correspondiente y asegurar que los documentos sean procesados correctamente.  
+   En la práctica, la ingesta se ejecuta mediante un script generado o asistido por Claude Code. Este script toma los documentos de la carpeta correspondiente, los procesa, genera los embeddings y actualiza la colección en Qdrant.  
+4. **Uso correcto de embeddings**  
+   Al momento de embeber la información, se debe distinguir entre documentos y preguntas:  
+   * `input_type="document"` al embeber documentos.  
+   * `input_type="query"` al embeber preguntas.  
+5. Esto es importante porque Voyage optimiza de forma distinta cada caso. Los documentos se preparan para ser recuperados, mientras que las preguntas se preparan para buscar información relevante dentro del índice.  
+6. **IDs determinísticos para evitar duplicados**  
+   La ingesta utiliza IDs determinísticos mediante UUID v5 sobre la combinación archivo-índice.  
+   Esto permite que, cuando se re-ingesta un documento actualizado, sus chunks anteriores sean reemplazados en lugar de duplicarse. De esta manera, la base vectorial se mantiene limpia y evita acumular versiones repetidas de la misma información.  
+7. **Confirmación de cambios con Git**  
+   Después de realizar la indexación y verificar que los archivos modificados son los correctos, se deben confirmar los cambios en el repositorio mediante el flujo habitual de   
+   Git:  
+   git add .  
+   git commit \-m "Actualiza documentos e ingesta de Polaris.  
+   git push  
+     
+   Este paso asegura que los cambios en los documentos, scripts o configuración queden versionados correctamente y puedan desplegarse en el entorno correspondiente.  
+8. **Revisión del deploy automático en Railway**  
+   Una vez hecho el push al repositorio, se debe revisar que el deploy automático en Railway se ejecute correctamente.  
+   Es recomendable validar que el despliegue no tenga errores, que el servicio levante de forma adecuada y que no existan fallas relacionadas con variables de entorno, dependencias, conexión a Qdrant o ejecución del backend.  
+9. **Verificación en Qdrant Cloud**  
+   Después de ingestar, se recomienda revisar el conteo de vectores en el dashboard de Qdrant Cloud.  
+   Esta verificación permite confirmar que los documentos fueron procesados correctamente y que la colección refleja el número esperado de chunks. Si el conteo no cambia o aumenta de forma inesperada, puede ser señal de que la ingesta no se ejecutó correctamente o de que se generaron duplicados.  
+10. **Pruebas funcionales en Polaris**  
+    Finalmente, se debe probar la ingesta directamente desde Polaris.  
+    Para ello, se recomienda hacer preguntas relacionadas con la nueva información agregada o actualizada. El objetivo es validar que el sistema no solo haya indexado los documentos, sino que también sea capaz de recuperarlos y utilizarlos correctamente en sus respuestas.  
+    Estas pruebas deben enfocarse en comprobar tres cosas:  
+    * Que Polaris encuentre la información nueva.  
+    * Que las respuestas estén alineadas con el contenido actualizado.  
+    * Que no siga respondiendo con información anterior cuando el documento ya fue reemplazado.  
+11. Esta etapa es clave porque confirma el funcionamiento completo del flujo: actualización documental, indexación, despliegue, recuperación y generación de respuestas.
+
+En resumen, la ingesta no termina cuando se ejecuta el script. El proceso completo incluye actualizar los archivos, subirlos al proyecto, indexarlos con apoyo de Claude Code, versionar los cambios, validar el deploy en Railway, revisar Qdrant Cloud y probar la nueva información directamente en Polaris.
 
 ### 6.7 Levantar el backend y verificarlo
 
